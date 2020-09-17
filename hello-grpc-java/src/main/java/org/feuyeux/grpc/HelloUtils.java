@@ -16,7 +16,6 @@ public class HelloUtils {
     }
 
     public static String getRandomId() {
-        int i = random.nextInt(5);
-        return String.valueOf(i);
+        return String.valueOf(random.nextInt(5));
     }
 }

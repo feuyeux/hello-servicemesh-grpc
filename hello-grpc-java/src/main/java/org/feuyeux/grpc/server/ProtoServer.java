@@ -1,10 +1,10 @@
 package org.feuyeux.grpc.server;
 
-import java.io.IOException;
-
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import lombok.extern.slf4j.Slf4j;
+
+import java.io.IOException;
 
 @Slf4j
 public class ProtoServer {

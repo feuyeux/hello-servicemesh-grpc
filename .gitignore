@@ -17,5 +17,8 @@ __pycache__
 pb
 *.log
 *.gz
-go/go.sum
-*/node_modules
+*/go.sum
+node_modules
+*/hello-grpc-go
+landing_pb*
+*.pyc

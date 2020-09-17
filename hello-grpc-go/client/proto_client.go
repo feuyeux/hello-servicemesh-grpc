@@ -1,0 +1,124 @@
+package main
+
+import (
+	"github.com/feuyeux/hello-grpc-go/common/pb"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"io"
+	"math/rand"
+	"os"
+	"strconv"
+	"time"
+)
+
+func talk(client pb.LandingServiceClient, request *pb.TalkRequest) {
+	log.Infof("Request=%+v", request)
+	r, err := client.Talk(context.Background(), request)
+	if err != nil {
+		log.Fatalf("fail to talk: %v", err)
+	}
+	log.Infof("Response=%+v", r)
+	//b, err := json.Marshal(r)
+	//log.Infof("Response=%+v", string(b))
+}
+func talkOneAnswerMore(client pb.LandingServiceClient, request *pb.TalkRequest) {
+	log.Infof("Request=%+v", request)
+	stream, err := client.TalkOneAnswerMore(context.Background(), request)
+	if err != nil {
+		log.Fatalf("%v.TalkOneAnswerMore(_) = _, %v", client, err)
+	}
+	for {
+		r, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("%v.TalkOneAnswerMore(_) = _, %v", client, err)
+		}
+		log.Infof("Response=%+v", r)
+	}
+}
+func talkMoreAnswerOne(client pb.LandingServiceClient, requests []*pb.TalkRequest) {
+	stream, err := client.TalkMoreAnswerOne(context.Background())
+	if err != nil {
+		log.Fatalf("%v.TalkMoreAnswerOne(_) = _, %v", client, err)
+	}
+	for _, request := range requests {
+		log.Infof("Request=%+v", request)
+		if err := stream.Send(request); err != nil {
+			log.Fatalf("%v.Send(%v) = %v", stream, request, err)
+		}
+	}
+	r, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatalf("%v.TalkMoreAnswerOne() got error %v, want %v", stream, err, nil)
+	}
+	log.Infof("Response=%+v", r)
+}
+
+func talkBidirectional(client pb.LandingServiceClient, requests []*pb.TalkRequest) {
+	stream, err := client.TalkBidirectional(context.Background())
+	if err != nil {
+		log.Fatalf("%v.TalkBidirectional(_) = _, %v", client, err)
+	}
+	waitc := make(chan struct{})
+	go func() {
+		for {
+			r, err := stream.Recv()
+			if err == io.EOF {
+				// read done.
+				close(waitc)
+				return
+			}
+			if err != nil {
+				log.Fatalf("Failed to receive a note : %v", err)
+			}
+			log.Infof("Response=%+v", r)
+		}
+	}()
+	for _, request := range requests {
+		log.Infof("Request=%+v", request)
+		if err := stream.Send(request); err != nil {
+			log.Fatalf("Failed to send : %v", err)
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	stream.CloseSend()
+	<-waitc
+}
+
+func randomId(max int) string {
+	return strconv.Itoa(rand.Intn(max))
+}
+
+func grpcServer() string {
+	server := os.Getenv("GRPC_SERVER")
+	if len(server) == 0 {
+		return "localhost"
+	} else {
+		return server
+	}
+}
+
+func main() {
+	address := grpcServer() + ":9996"
+	conn, err := grpc.Dial(address, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer conn.Close()
+	c := pb.NewLandingServiceClient(conn)
+	log.Infof("Unary RPC")
+	talk(c, &pb.TalkRequest{Data: "0", Meta: "GOLANG"})
+	log.Infof("Server streaming RPC")
+	talkOneAnswerMore(c, &pb.TalkRequest{Data: "0,1,2", Meta: "GOLANG"})
+	log.Infof("Client streaming RPC")
+	requests := []*pb.TalkRequest{
+		{Data: randomId(5), Meta: "GOLANG"},
+		{Data: randomId(5), Meta: "GOLANG"},
+		{Data: randomId(5), Meta: "GOLANG"}}
+	talkMoreAnswerOne(c, requests)
+	log.Infof("Bidirectional streaming RPC")
+	talkBidirectional(c, requests)
+}

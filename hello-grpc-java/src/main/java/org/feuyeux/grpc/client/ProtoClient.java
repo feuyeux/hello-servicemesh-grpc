@@ -2,7 +2,6 @@ package org.feuyeux.grpc.client;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 import org.feuyeux.grpc.HelloUtils;
@@ -31,11 +30,11 @@ public class ProtoClient {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        ProtoClient protoClient = new ProtoClient("localhost", 9996);
+        ProtoClient protoClient = new ProtoClient(getGrcServer(), 9996);
         try {
             log.info("Unary RPC");
             TalkRequest talkRequest = TalkRequest.newBuilder()
-                    .setMeta("java")
+                    .setMeta("JAVA")
                     .setData("0")
                     .build();
             log.info("Request=\n{}", talkRequest);
@@ -45,26 +44,24 @@ public class ProtoClient {
             log.info("====");
             log.info("Server streaming RPC");
             talkRequest = TalkRequest.newBuilder()
-                    .setMeta("java")
+                    .setMeta("JAVA")
                     .setData("0,1,2")
                     .build();
             log.info("Request=\n{}", talkRequest);
             List<TalkResponse> talkResponses = protoClient.talkOneAnswerMore(talkRequest);
-            talkResponses.stream().forEach(resp -> {
-                log.info("Response=\n{}", resp);
-            });
+            talkResponses.forEach(resp -> log.info("Response=\n{}", resp));
             log.info("====");
             log.info("Client streaming RPC");
             List<TalkRequest> requests = Arrays.asList(TalkRequest.newBuilder()
-                            .setMeta("java")
+                            .setMeta("JAVA")
                             .setData(HelloUtils.getRandomId())
                             .build(),
                     TalkRequest.newBuilder()
-                            .setMeta("java")
+                            .setMeta("JAVA")
                             .setData(HelloUtils.getRandomId())
                             .build(),
                     TalkRequest.newBuilder()
-                            .setMeta("java")
+                            .setMeta("JAVA")
                             .setData(HelloUtils.getRandomId())
                             .build());
             protoClient.talkMoreAnswerOne(requests);
@@ -74,6 +71,14 @@ public class ProtoClient {
         } finally {
             protoClient.shutdown();
         }
+    }
+
+    private static String getGrcServer() {
+        String server = System.getenv("GRPC_SERVER");
+        if (server == null) {
+            return "localhost";
+        }
+        return server;
     }
 
     public void shutdown() throws InterruptedException {
@@ -87,9 +92,7 @@ public class ProtoClient {
     public List<TalkResponse> talkOneAnswerMore(TalkRequest request) {
         List<TalkResponse> talkResponseList = new ArrayList<>();
         Iterator<TalkResponse> talkResponses = blockingStub.talkOneAnswerMore(request);
-        talkResponses.forEachRemaining(r -> {
-            talkResponseList.add(r);
-        });
+        talkResponses.forEachRemaining(talkResponseList::add);
         return talkResponseList;
     }
 
@@ -103,7 +106,7 @@ public class ProtoClient {
 
             @Override
             public void onError(Throwable t) {
-                log.warn("Failed: {0}", Status.fromThrowable(t));
+                log.error("", t);
                 finishLatch.countDown();
             }
 
@@ -119,7 +122,7 @@ public class ProtoClient {
                     log.info("Request=\n{}", request);
                     requestObserver.onNext(request);
                     try {
-                        TimeUnit.SECONDS.sleep(1);
+                        TimeUnit.MICROSECONDS.sleep(5);
                     } catch (InterruptedException ignored) {
                     }
                 }
@@ -147,7 +150,7 @@ public class ProtoClient {
 
             @Override
             public void onError(Throwable t) {
-                log.warn("Failed: {0}", Status.fromThrowable(t));
+                log.error("", t);
                 finishLatch.countDown();
             }
 

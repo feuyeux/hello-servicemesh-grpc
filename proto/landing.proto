@@ -13,7 +13,7 @@ service LandingService {
   //Server streaming RPC
   rpc talkOneAnswerMore (TalkRequest) returns (stream TalkResponse) {
   }
-  //Client streaming RPC
+  //Client streaming RPC with random & sleep
   rpc talkMoreAnswerOne (stream TalkRequest) returns (TalkResponse) {
   }
   //Bidirectional streaming RPC
@@ -22,9 +22,9 @@ service LandingService {
 }
 
 message TalkRequest {
-  //query information
+  //language index
   string data = 1;
-  //query meta-info
+  //clientside language
   string meta = 2;
 }
 
@@ -34,8 +34,14 @@ message TalkResponse {
 }
 
 message TalkResult {
+  //timestamp
   int64 id = 1;
+  //enum
   ResultType type = 2;
+  // id:result uuid
+  // idx:language index
+  // data: hello
+  // meta: serverside language
   map<string, string> kv = 3;
 }
 
