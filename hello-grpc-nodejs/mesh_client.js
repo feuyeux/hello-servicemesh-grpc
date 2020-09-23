@@ -76,11 +76,13 @@ function main() {
     request.setData("0")
     request.setMeta("NODEJS")
     talk(c, request)
+
     sleep.msleep(50)
     request = new messages.TalkRequest()
     request.setData("0,1,2")
     request.setMeta("NODEJS")
     talkOneAnswerMore(c, request)
+
     sleep.msleep(50)
     let r1 = new messages.TalkRequest()
     r1.setData(randomId(5))
@@ -93,6 +95,7 @@ function main() {
     r3.setMeta("NODEJS")
     let rs = [r1, r2, r3]
     talkMoreAnswerOne(c, rs)
+
     sleep.msleep(50)
     talkBidirectional(c, rs)
 }
