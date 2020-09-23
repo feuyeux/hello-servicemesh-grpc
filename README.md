@@ -1,15 +1,15 @@
 ## hello-servicemesh-grpc
 ### GRPC Diagram
-![](img/hello-grpc.png)
+![](img/grpc_diagram.png)
 ### Kube Topology
-
-![](img/hello-grpc-servicemesh.png)
+![](img/grpc_kube.png)
 
 ### Mesh Management
 #### v1 100%
+![](img/grpc_mesh_v1_100.png)
 
 #### api 100%
-
+![](img/grpc_mesh_api_100.png)
 
 ### Proto3
 - [proto](proto)
