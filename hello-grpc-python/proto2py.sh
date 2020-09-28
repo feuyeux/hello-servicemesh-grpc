@@ -15,3 +15,4 @@ python -m grpc.tools.protoc \
   --python_out=${py_proto_path} \
   --grpc_python_out=${py_proto_path} \
   $(pwd)/proto/landing.proto
+touch $(pwd)/landing_pb2/__init__.py

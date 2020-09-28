@@ -11,8 +11,8 @@ alias k="kubectl --kubeconfig $USER_CONFIG"
 
 # k delete namespace grpc-best >/dev/null 2>&1
 # sleep 5s
-# k create ns grpc-best
-# k label ns grpc-best istio-injection=enabled
+k create ns grpc-best
+k label ns grpc-best istio-injection=enabled
 
 k apply -f grpc-sa.yaml
 k apply -f grpc-svc.yaml

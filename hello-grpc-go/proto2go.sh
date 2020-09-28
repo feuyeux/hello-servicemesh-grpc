@@ -3,8 +3,8 @@ cd "$(
   cd "$(dirname "$0")" >/dev/null 2>&1
   pwd -P
 )/" || exit
-
-export PATH=$PATH:$GOPATH/bin
+# brew install grpc protobuf
+export PATH="$PATH:$(go env GOPATH)/bin"
 proto_path="$(pwd)/proto"
 go_proto_path="$(pwd)"
 echo "proto_path=$proto_path,go_proto_path=$go_proto_path"

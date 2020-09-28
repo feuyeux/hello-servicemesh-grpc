@@ -1,7 +1,7 @@
 ## grpc golang demo
 ### Setup
 ```sh
-go build
+sh init.sh
 ```
 ### Generate
 ```sh

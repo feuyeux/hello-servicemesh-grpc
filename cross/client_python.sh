@@ -6,4 +6,4 @@ cd "$(
 
 cd ../hello-grpc-python
 export PYTHONPATH=$(pwd)
-python server/protoClient.py
+python client/protoClient.py
