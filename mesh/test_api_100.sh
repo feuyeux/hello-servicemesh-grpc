@@ -28,6 +28,5 @@ rm -rf mesh_result
 for i in {1..10}; do
   docker exec -e GRPC_SERVER="${INGRESS_IP}" -it "$client_node_container" node mesh_client.js >> mesh_result
 done
-
 sort mesh_result | grep -v "^[[:space:]]*$"| uniq -c | sort -nrk1
 rm -rf mesh_result
