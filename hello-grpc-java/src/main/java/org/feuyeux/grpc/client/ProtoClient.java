@@ -1,19 +1,14 @@
 package org.feuyeux.grpc.client;
 
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
+import io.grpc.*;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 import org.feuyeux.grpc.HelloUtils;
 import org.feuyeux.grpc.proto.LandingServiceGrpc;
 import org.feuyeux.grpc.proto.TalkRequest;
 import org.feuyeux.grpc.proto.TalkResponse;
-import org.feuyeux.grpc.proto.TalkResult;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -25,8 +20,10 @@ public class ProtoClient {
 
     public ProtoClient(String host, int port) {
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
-        blockingStub = LandingServiceGrpc.newBlockingStub(channel);
-        asyncStub = LandingServiceGrpc.newStub(channel);
+        ClientInterceptor interceptor = new HeaderClientInterceptor();
+        Channel interceptChannel = ClientInterceptors.intercept(channel, interceptor);
+        blockingStub = LandingServiceGrpc.newBlockingStub(interceptChannel);
+        asyncStub = LandingServiceGrpc.newStub(interceptChannel);
     }
 
     public static void main(String[] args) throws InterruptedException {
@@ -37,20 +34,18 @@ public class ProtoClient {
                     .setMeta("JAVA")
                     .setData("0")
                     .build();
-            log.info("Request=\n{}", talkRequest);
+            log.info("Request data:{},meta:{}", talkRequest.getData(), talkRequest.getMeta());
             TalkResponse response = protoClient.talk(talkRequest);
-            TalkResult result = response.getResults(0);
-            log.info("Response id={},type={},kv={}", result.getId(), result.getType(), result.getKvMap());
-            log.info("====");
+            printResponse(response);
             log.info("Server streaming RPC");
             talkRequest = TalkRequest.newBuilder()
                     .setMeta("JAVA")
                     .setData("0,1,2")
                     .build();
-            log.info("Request=\n{}", talkRequest);
+            log.info("Request data:{},meta:{}", talkRequest.getData(), talkRequest.getMeta());
             List<TalkResponse> talkResponses = protoClient.talkOneAnswerMore(talkRequest);
-            talkResponses.forEach(resp -> log.info("Response=\n{}", resp));
-            log.info("====");
+            talkResponses.forEach(r -> printResponse(r));
+
             log.info("Client streaming RPC");
             List<TalkRequest> requests = Arrays.asList(TalkRequest.newBuilder()
                             .setMeta("JAVA")
@@ -65,12 +60,22 @@ public class ProtoClient {
                             .setData(HelloUtils.getRandomId())
                             .build());
             protoClient.talkMoreAnswerOne(requests);
-            log.info("====");
+
             log.info("Bidirectional streaming RPC");
             protoClient.talkBidirectional(requests);
         } finally {
             protoClient.shutdown();
         }
+    }
+
+    private static void printResponse(TalkResponse response) {
+        response.getResultsList().forEach(result -> {
+                    Map<String, String> kv = result.getKvMap();
+                    log.info("{} {} [{} {} {},{}:{}]", response.getStatus(), result.getId(),
+                            kv.get("meta"), result.getType(), kv.get("id"), kv.get("idx"), kv.get("data"));
+                }
+
+        );
     }
 
     private static String getGrcServer() {
@@ -101,7 +106,7 @@ public class ProtoClient {
         StreamObserver<TalkResponse> responseObserver = new StreamObserver<TalkResponse>() {
             @Override
             public void onNext(TalkResponse talkResponse) {
-                log.info("Response=\n{}", talkResponse);
+                printResponse(talkResponse);
             }
 
             @Override
@@ -119,7 +124,7 @@ public class ProtoClient {
         try {
             requests.forEach(request -> {
                 if (finishLatch.getCount() > 0) {
-                    log.info("Request=\n{}", request);
+                    log.info("Request data:{},meta:{}", request.getData(), request.getMeta());
                     requestObserver.onNext(request);
                     try {
                         TimeUnit.MICROSECONDS.sleep(5);
@@ -145,7 +150,7 @@ public class ProtoClient {
         StreamObserver<TalkResponse> responseObserver = new StreamObserver<TalkResponse>() {
             @Override
             public void onNext(TalkResponse talkResponse) {
-                log.info("Response=\n{}", talkResponse);
+                printResponse(talkResponse);
             }
 
             @Override
@@ -163,7 +168,7 @@ public class ProtoClient {
         try {
             requests.forEach(request -> {
                 if (finishLatch.getCount() > 0) {
-                    log.info("Request={}", request);
+                    log.info("Request data:{},meta:{}", request.getData(), request.getMeta());
                     requestObserver.onNext(request);
                     try {
                         TimeUnit.SECONDS.sleep(1);

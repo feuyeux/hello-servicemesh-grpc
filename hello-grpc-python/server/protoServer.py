@@ -1,5 +1,5 @@
 # encoding: utf-8
-
+import logging
 import time
 import uuid
 
@@ -8,6 +8,14 @@ from concurrent import futures
 
 from landing_pb2 import landing_pb2
 from landing_pb2 import landing_pb2_grpc
+
+logger = logging.getLogger('grpc-server')
+logger.setLevel(logging.INFO)
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s')
+console.setFormatter(formatter)
+logger.addHandler(console)
 
 hellos = ["Hello", "Bonjour", "Hola", "こんにちは", "Ciao", "안녕하세요"]
 
@@ -24,8 +32,19 @@ def build_result(data):
     return result
 
 
+def read_headers(method_name, context):
+    metadata = context.invocation_metadata()
+    metadata_dict = {}
+    for c in metadata:
+        logger.info("%s HEADER %s:%s", method_name, c.key, c.value)
+        metadata_dict[c.key] = c.value
+    return metadata_dict
+
+
 class LandingServiceServer(landing_pb2_grpc.LandingServiceServicer):
     def talk(self, request, context):
+        read_headers("TALK", context)
+        logger.info("TALK REQUEST: data=%s,meta=%s", request.data, request.meta)
         response = landing_pb2.TalkResponse()
         response.status = 200
         result = build_result(request.data)
@@ -33,6 +52,8 @@ class LandingServiceServer(landing_pb2_grpc.LandingServiceServicer):
         return response
 
     def talkOneAnswerMore(self, request, context):
+        read_headers("TalkOneAnswerMore", context)
+        logger.info("TalkOneAnswerMore REQUEST: data=%s,meta=%s", request.data, request.meta)
         datas = request.data.split(",")
         for data in datas:
             response = landing_pb2.TalkResponse()
@@ -42,14 +63,18 @@ class LandingServiceServer(landing_pb2_grpc.LandingServiceServicer):
             yield response
 
     def talkMoreAnswerOne(self, request_iterator, context):
+        read_headers("TalkMoreAnswerOne", context)
         response = landing_pb2.TalkResponse()
         response.status = 200
         for request in request_iterator:
+            logger.info("TalkMoreAnswerOne REQUEST: data=%s,meta=%s", request.data, request.meta)
             response.results.append(build_result(request.data))
         return response
 
     def talkBidirectional(self, request_iterator, context):
+        read_headers("TalkBidirectional", context)
         for request in request_iterator:
+            logger.info("TalkBidirectional REQUEST: data=%s,meta=%s", request.data, request.meta)
             response = landing_pb2.TalkResponse()
             response.status = 200
             result = build_result(request.data)

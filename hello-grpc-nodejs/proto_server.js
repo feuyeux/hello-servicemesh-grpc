@@ -20,6 +20,7 @@ const logger = createLogger({
 })
 
 function talk(call, callback) {
+    printHeaders("Talk", call)
     let response = new messages.TalkResponse()
     response.setStatus(200)
     const talkResult = buildResult(call.request.getData())
@@ -30,6 +31,7 @@ function talk(call, callback) {
 }
 
 function talkOneAnswerMore(call) {
+    printHeaders("TalkOneAnswerMore",call)
     let datas = call.request.getData().split(",")
     for (const data in datas) {
         let response = new messages.TalkResponse()
@@ -44,6 +46,7 @@ function talkOneAnswerMore(call) {
 }
 
 function talkMoreAnswerOne(call, callback) {
+    printHeaders("TalkMoreAnswerOne",call)
     let talkResults = []
     call.on('data', function (request) {
         talkResults.push(buildResult(request.getData()))
@@ -58,6 +61,7 @@ function talkMoreAnswerOne(call, callback) {
 }
 
 function talkBidirectional(call) {
+    printHeaders("TalkBidirectional",call)
     call.on('data', function (request) {
         let response = new messages.TalkResponse()
         response.setStatus(200)
@@ -101,6 +105,13 @@ function main() {
     })
     server.bind('0.0.0.0:9996', grpc.ServerCredentials.createInsecure())
     server.start()
+}
+
+function printHeaders(methodName,call) {
+    let headers = call.metadata.getMap();
+    for (let key in headers) {
+        logger.info(methodName+ " HEADER: " + key + ":" + headers[key])
+    }
 }
 
 main()

@@ -2,6 +2,8 @@ package org.feuyeux.grpc.server;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.ServerInterceptors;
+import io.grpc.ServerServiceDefinition;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -11,7 +13,10 @@ public class ProtoServer {
     private final Server server;
 
     public ProtoServer(final int port) throws IOException {
-        this.server = ServerBuilder.forPort(port).addService(new LandingServiceImpl()).build();
+        ServerServiceDefinition intercept = ServerInterceptors.intercept(new LandingServiceImpl(), new HeaderServerInterceptor());
+        this.server = ServerBuilder.forPort(port)
+                .addService(intercept)
+                .build();
         start();
     }
 

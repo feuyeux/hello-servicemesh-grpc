@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/feuyeux/hello-grpc-go/common/pb"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc/metadata"
 	"io"
 	"strconv"
 	"strings"
@@ -16,6 +18,13 @@ var helloList = []string{"Hello", "Bonjour", "Hola", "こんにちは", "Ciao", 
 type ProtoServer struct{}
 
 func (s *ProtoServer) Talk(ctx context.Context, request *pb.TalkRequest) (*pb.TalkResponse, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		v1 := md.Get("k1")
+		v2 := md.Get("k2")
+		log.Infof("TALK HEADERS: k1=%v,k2=%v", v1, v2)
+	}
+	log.Infof("TALK REQUEST: data=%s,meta=%s", request.Data, request.Meta)
 	result := s.buildResult(request.Data)
 	return &pb.TalkResponse{
 		Status:  200,
@@ -24,6 +33,7 @@ func (s *ProtoServer) Talk(ctx context.Context, request *pb.TalkRequest) (*pb.Ta
 }
 
 func (s *ProtoServer) TalkOneAnswerMore(request *pb.TalkRequest, stream pb.LandingService_TalkOneAnswerMoreServer) error {
+	log.Infof("TalkOneAnswerMore REQUEST: data=%s,meta=%s", request.Data, request.Meta)
 	datas := strings.Split(request.Data, ",")
 	for _, d := range datas {
 		result := s.buildResult(d)
@@ -52,6 +62,7 @@ func (s *ProtoServer) TalkMoreAnswerOne(stream pb.LandingService_TalkMoreAnswerO
 		if err != nil {
 			return err
 		}
+		log.Infof("TalkMoreAnswerOne REQUEST: data=%s,meta=%s", in.Data, in.Meta)
 		result := s.buildResult(in.Data)
 		rs = append(rs, result)
 	}
@@ -66,6 +77,7 @@ func (s *ProtoServer) TalkBidirectional(stream pb.LandingService_TalkBidirection
 		if err != nil {
 			return err
 		}
+		log.Infof("TalkBidirectional REQUEST: data=%s,meta=%s", in.Data, in.Meta)
 		result := s.buildResult(in.Data)
 		talkResponse := &pb.TalkResponse{
 			Status:  200,

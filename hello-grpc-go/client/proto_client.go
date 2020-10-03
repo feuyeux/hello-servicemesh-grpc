@@ -5,6 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"io"
 	"math/rand"
 	"os"
@@ -14,17 +15,20 @@ import (
 
 func talk(client pb.LandingServiceClient, request *pb.TalkRequest) {
 	log.Infof("Request=%+v", request)
-	r, err := client.Talk(context.Background(), request)
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "k1", "v1", "k2", "v2")
+	r, err := client.Talk(ctx, request)
 	if err != nil {
 		log.Fatalf("fail to talk: %v", err)
 	}
-	log.Infof("Response=%+v", r)
+	printResponse(r)
 	//b, err := json.Marshal(r)
 	//log.Infof("Response=%+v", string(b))
 }
+
 func talkOneAnswerMore(client pb.LandingServiceClient, request *pb.TalkRequest) {
 	log.Infof("Request=%+v", request)
-	stream, err := client.TalkOneAnswerMore(context.Background(), request)
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "k1", "v1", "k2", "v2")
+	stream, err := client.TalkOneAnswerMore(ctx, request)
 	if err != nil {
 		log.Fatalf("%v.TalkOneAnswerMore(_) = _, %v", client, err)
 	}
@@ -36,11 +40,12 @@ func talkOneAnswerMore(client pb.LandingServiceClient, request *pb.TalkRequest) 
 		if err != nil {
 			log.Fatalf("%v.TalkOneAnswerMore(_) = _, %v", client, err)
 		}
-		log.Infof("Response=%+v", r)
+		printResponse(r)
 	}
 }
 func talkMoreAnswerOne(client pb.LandingServiceClient, requests []*pb.TalkRequest) {
-	stream, err := client.TalkMoreAnswerOne(context.Background())
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "k1", "v1", "k2", "v2")
+	stream, err := client.TalkMoreAnswerOne(ctx)
 	if err != nil {
 		log.Fatalf("%v.TalkMoreAnswerOne(_) = _, %v", client, err)
 	}
@@ -54,11 +59,12 @@ func talkMoreAnswerOne(client pb.LandingServiceClient, requests []*pb.TalkReques
 	if err != nil {
 		log.Fatalf("%v.TalkMoreAnswerOne() got error %v, want %v", stream, err, nil)
 	}
-	log.Infof("Response=%+v", r)
+	printResponse(r)
 }
 
 func talkBidirectional(client pb.LandingServiceClient, requests []*pb.TalkRequest) {
-	stream, err := client.TalkBidirectional(context.Background())
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "k1", "v1", "k2", "v2")
+	stream, err := client.TalkBidirectional(ctx)
 	if err != nil {
 		log.Fatalf("%v.TalkBidirectional(_) = _, %v", client, err)
 	}
@@ -74,7 +80,7 @@ func talkBidirectional(client pb.LandingServiceClient, requests []*pb.TalkReques
 			if err != nil {
 				log.Fatalf("Failed to receive a note : %v", err)
 			}
-			log.Infof("Response=%+v", r)
+			printResponse(r)
 		}
 	}()
 	for _, request := range requests {
@@ -121,4 +127,12 @@ func main() {
 	talkMoreAnswerOne(c, requests)
 	log.Infof("Bidirectional streaming RPC")
 	talkBidirectional(c, requests)
+}
+
+func printResponse(response *pb.TalkResponse) {
+	for _, result := range response.Results {
+		kv := result.Kv
+		log.Infof("[%d] %d [%s %+v %s,%s:%s]",
+			response.Status, result.Id, kv["meta"], result.Type, kv["id"], kv["idx"], kv["data"])
+	}
 }

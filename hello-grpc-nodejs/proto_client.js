@@ -29,24 +29,23 @@ function grpcServer() {
 
 function talk(client, request) {
     logger.info("Talk:" + request)
-    client.talk(request, function (err, response) {
-        logger.info("Talk:" + response)
-        // let result = response.getResultsList()[0]
-        // let kvMap = result.getKvMap()
-        // logger.info("Talk:" + kvMap.get("data") + response)
+    const metadata = new grpc.Metadata();
+    metadata.add("k1", "v1");
+    metadata.add("k2", "v2");
+    client.talk(request, metadata, function (err, response) {
+        printResponse("Talk:", response)
     })
 }
 
 function talkOneAnswerMore(client, request) {
     logger.info("TalkOneAnswerMore:" + request)
-    let call = client.talkOneAnswerMore(request)
+    const metadata = new grpc.Metadata();
+    metadata.add("k1", "v1");
+    metadata.add("k2", "v2");
+    let call = client.talkOneAnswerMore(request, metadata)
 
     call.on('data', function (response) {
-        logger.info("TalkOneAnswerMore:" + response)
-        // let result = response.getResultsList()[0]
-        // let kvMap = result.getKvMap()
-        // logger.info(response)
-        // logger.info(kvMap.get("data"))
+        printResponse("TalkOneAnswerMore:", response)
     })
     call.on('end', function () {
         logger.debug("DONE")
@@ -54,31 +53,46 @@ function talkOneAnswerMore(client, request) {
 }
 
 function talkMoreAnswerOne(client, requests) {
+    const metadata = new grpc.Metadata();
+    metadata.add("k1", "v1");
+    metadata.add("k2", "v2");
     let call = client.talkMoreAnswerOne(function (err, response) {
-        logger.info("TalkMoreAnswerOne:" + response)
+        printResponse("TalkMoreAnswerOne:", response)
     })
     requests.forEach(request => {
         logger.info("TalkMoreAnswerOne:" + request)
-        call.write(request)
+        call.write(request, metadata)
     })
     call.end()
 }
 
 function talkBidirectional(client, requests) {
+    const metadata = new grpc.Metadata();
+    metadata.add("k1", "v1");
+    metadata.add("k2", "v2");
     let call = client.talkBidirectional()
     call.on('data', function (response) {
-        logger.info("TalkBidirectional:" + response)
+        printResponse("TalkBidirectional:", response)
     })
     requests.forEach(request => {
         logger.info("TalkBidirectional:" + request)
         sleep.msleep(5)
-        call.write(request)
+        call.write(request, metadata)
     })
     call.end()
 }
 
 function randomId(max) {
     return Math.floor(Math.random() * Math.floor(max)).toString()
+}
+
+function printResponse(methodName, response) {
+    response.getResultsList().forEach(result => {
+        let kv = result.getKvMap()
+        logger.info(methodName + " " + response.getStatus() + " " + result.getId() +
+            " [" + kv.get("meta") + " " + result.getType() + " " + kv.get("id") + "," +
+            kv.get("idx") + ":" + kv.get("data") + "]")
+    })
 }
 
 function main() {
