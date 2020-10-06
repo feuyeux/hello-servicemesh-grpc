@@ -17,7 +17,7 @@ docker rm $(docker ps -a -q) >/dev/null 2>&1
 docker run -d --name grpc_client_node -e GRPC_SERVER="${INGRESS_IP}" registry.cn-beijing.aliyuncs.com/asm_repo/grpc_client_node:1.0.0 /bin/sleep 3650d
 client_node_container=$(docker ps -q)
 
-echo "====1 Test v1 100% (4 api from JAVA)===="
+echo "==== Test v1 100% (4 api from JAVA) ===="
 m apply -f grpc-vs-v1-100.yaml
 sleep 10s
 echo "warm up ... "
@@ -30,21 +30,5 @@ echo "testing ... "
 for i in {1..10}; do
   docker exec -e GRPC_SERVER="${INGRESS_IP}" -it "$client_node_container" node mesh_client.js >> mesh_result
 done
-sort mesh_result | grep -v "^[[:space:]]*$" | uniq -c | sort -nrk1
-rm -rf mesh_result
-
-echo "====2 Test v2 100% (4 api from GOLANG)===="
-m apply -f grpc-vs-v2-100.yaml
-sleep 10s
-echo "warm up ... "
-for i in {1..10}; do
-  docker exec -e GRPC_SERVER="${INGRESS_IP}" -it "$client_node_container" node mesh_client.js >/dev/null 2>&1
-done
-rm -rf mesh_result
-echo "testing ... "
-for i in {1..10}; do
-  docker exec -e GRPC_SERVER="${INGRESS_IP}" -it "$client_node_container" node mesh_client.js >> mesh_result
-done
-
 sort mesh_result | grep -v "^[[:space:]]*$" | uniq -c | sort -nrk1
 rm -rf mesh_result
